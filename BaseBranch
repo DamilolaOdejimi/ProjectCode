@@ -26,8 +26,8 @@ Dim SHEET_INCRE As Integer
 '
 '------------------------
 Sub COLLECT_FOLDER_PATH_FROM_CELLS()
-    Workbooks("VBA RUN.xlsm").Activate
-    Sheets("Sheet1").Activate
+    Workbooks("GL Analysis.xlsm").Activate
+    Sheets("GL Analysis").Activate
     
     MsgBox "This Analysis process will skip any branch folder without STMT, SPEC and CATEG Excel Sheets. " & _
             "It will continue if any of the afore listed exists in the folder."
@@ -36,13 +36,13 @@ Sub COLLECT_FOLDER_PATH_FROM_CELLS()
 '------------COLLECT_DATA_FROM_CELLS
     Index_Branch = 0
     Index_Incomplete = 0
-    ERROR_CHECK_INDEX = 0
-    SHEET_INCRE = 1
-
-    For Count = 35 To 35
     
-        Workbooks("VBA RUN.xlsm").Activate
-        Sheets("Sheet1").Activate
+    For Count = 8 To 307
+        ERROR_CHECK_INDEX = 0
+        SHEET_INCRE = 1
+    
+        Workbooks("GL Analysis.xlsm").Activate
+        Sheets("GL Analysis").Activate
         Select Case Range("C" & Count).Value = " "
             Case True
               Index_Incomplete = 1 + Index_Incomplete
@@ -57,37 +57,103 @@ Sub COLLECT_FOLDER_PATH_FROM_CELLS()
                     EMPTY_OR_WRONG_CELL_ENTRY(Index_Incomplete) = "C" & Count
                 
               Case Else
+                Application.DisplayAlerts = False
                 Index_Branch = Index_Branch + 1
                 ReDim BRANCH_CODE(1 To Index_Branch)
                 Set BRANCH_CODE(Index_Branch) = Range("C" & Count)
+
+
+                On Error GoTo S1
+                Workbooks.Open Filename:= _
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\STMT." & BRANCH_CODE(Index_Branch) & ".csv"
                 
+                ERROR_CHECK_INDEX = ERROR_CHECK_INDEX + 1
+                SHEET_INCRE = SHEET_INCRE + 1
+                
+                If ERROR_CHECK_INDEX = 1 Then
                 Workbooks.Add
                 ActiveWorkbook.SaveAs Filename:= _
-                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\AnalysisTest.xlsx", FileFormat:= _
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\AnalysisTest.xlsx", FileFormat:= _
                 xlOpenXMLWorkbook, CreateBackup:=False
-'-----------------------------------
-'GET_STMT_FILE:
-                Application.DisplayAlerts = False
-                On Error GoTo GET_SPEC_FILE
+                Sheets("Sheet1").Name = "analysis"
+                Range("C3").Select
+                ActiveCell.FormulaR1C1 = "SUBTOTAL"
+                End If
+                
+                GoTo GET_STMT_FILE
+
+S1:
+                Resume S1_R
+S1_R:
+                On Error GoTo S2
                 Workbooks.Open Filename:= _
-                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\STMT." & BRANCH_CODE(Index_Branch) & ".csv"
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\SPEC." & BRANCH_CODE(Index_Branch) & ".csv"
 
                 ERROR_CHECK_INDEX = ERROR_CHECK_INDEX + 1
                 SHEET_INCRE = SHEET_INCRE + 1
+                
+                If ERROR_CHECK_INDEX = 1 Then
+                Workbooks.Add
+                ActiveWorkbook.SaveAs Filename:= _
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\AnalysisTest.xlsx", FileFormat:= _
+                xlOpenXMLWorkbook, CreateBackup:=False
+                Sheets("Sheet1").Name = "analysis"
+                Range("C3").Select
+                ActiveCell.FormulaR1C1 = "SUBTOTAL"
+                End If
+                
+                GoTo GET_SPEC_FILE
 
-                Windows("STMT." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+S2:
+                Resume S2_R
+S2_R:
+                On Error GoTo S3
+                Workbooks.Open Filename:= _
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\CATEG." & BRANCH_CODE(Index_Branch) & ".csv"
+
+                ERROR_CHECK_INDEX = ERROR_CHECK_INDEX + 1
+                SHEET_INCRE = SHEET_INCRE + 1
+                
+                If ERROR_CHECK_INDEX = 1 Then
+                Workbooks.Add
+                ActiveWorkbook.SaveAs Filename:= _
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\AnalysisTest.xlsx", FileFormat:= _
+                xlOpenXMLWorkbook, CreateBackup:=False
+                Sheets("Sheet1").Name = "analysis"
+                Range("C3").Select
+                ActiveCell.FormulaR1C1 = "SUBTOTAL"
+                End If
+                
+                GoTo GET_CATEG_FILE
+
+S3:
+                Resume S3_R
+S3_R:
+                If ERROR_CHECK_INDEX > 0 Then
+                    GoTo GET_CAL_FILE
+                Else
+                    Index_Incomplete = 1 + Index_Incomplete
+                    GoTo ESCAPE_LABEL
+                End If
+'-----------------------------------
+GET_STMT_FILE:
+                Application.DisplayAlerts = False
+
+                Workbooks("STMT." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 Range("A1:A8000").Select
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
-
-                Sheets.Add After:=Sheets("Sheet1")
+                Workbooks("AnalysisTest.xlsx").Activate
+                Sheets("analysis").Select
+                Range("B" & SHEET_INCRE + 3).Select
+                ActiveCell.FormulaR1C1 = "STMT"
+                Sheets.Add After:=Sheets("anaylsis")
                 Sheets("Sheet" & SHEET_INCRE).Name = "STMT"
                 Sheets("STMT").Select
                 ActiveSheet.Paste
-                Windows("STMT." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("STMT." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 ActiveWindow.Close
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("STMT").Select
                 Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
                 TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
@@ -99,24 +165,24 @@ Sub COLLECT_FOLDER_PATH_FROM_CELLS()
                 ActiveCell.FormulaR1C1 = "=SUBTOTAL(9,C[-8])"
                 Range("P2").Select
 
-                Workbooks("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("stmt").Select
                 Rows("1:1").Select
                 Selection.Copy
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("STMT").Select
                 Rows("1:1").Select
                 Range("E1").Activate
                 Selection.Insert Shift:=xlDown
 
                 '***COPYING AND PASTING OF "CO.CODE" HEADER
-                Workbooks("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("categ").Select
                 Range("L1").Select
                 Application.CutCopyMode = False
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("STMT").Select
                 Range("M1").Select
                 ActiveSheet.Paste
@@ -167,38 +233,36 @@ Sub COLLECT_FOLDER_PATH_FROM_CELLS()
 
                 Range("P2").Select
                 Selection.NumberFormat = "0.00"
+                Application.CutCopyMode = False
+                Selection.Copy
+                Sheets("analysis").Select
+                Range("C" & SHEET_INCRE + 2).Select
+                ActiveSheet.Paste
+                Sheets("STMT").Select
                 Range("A1:P8001").Select
                 Range("P2").Activate
                 Selection.Columns.AutoFit
                 'Resume GET_SPEC_FILE_2
+                GoTo S1_R
 '-----------------------------------
 GET_SPEC_FILE:
-                Resume GET_SPEC_FILE_2
-GET_SPEC_FILE_2:
-                Application.DisplayAlerts = False
-                On Error GoTo 0
-                On Error GoTo GET_CATEG_FILE
-                Workbooks.Open Filename:= _
-                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\SPEC." & BRANCH_CODE(Index_Branch) & ".csv"
-                
-
-                ERROR_CHECK_INDEX = ERROR_CHECK_INDEX + 1
-                SHEET_INCRE = SHEET_INCRE + 1
-
-                Windows("SPEC." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("SPEC." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 Range("A1:A8000").Select
                 Application.CutCopyMode = False
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 'Worksheets.Add(After:=Worksheets("Result")).Name = "Samples"
+                Sheets("analysis").Select
+                Range("B" & SHEET_INCRE + 3).Select
+                ActiveCell.FormulaR1C1 = "SPEC"
                 Sheets.Add After:=ActiveSheet
                 Sheets("Sheet" & SHEET_INCRE).Name = "SPEC"
                 Sheets("SPEC").Select
                 ActiveSheet.Paste
-                Windows("SPEC." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("SPEC." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 ActiveWindow.Close
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("SPEC").Select
                 Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
                 TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
@@ -210,13 +274,13 @@ GET_SPEC_FILE_2:
                 ActiveCell.FormulaR1C1 = "=SUBTOTAL(9,C[-5])"
                 Range("M2").Select
 
-                Workbooks("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("spec").Select
                 Rows("1:1").Select
                 Application.CutCopyMode = False
                 Selection.Copy
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("SPEC").Select
                 Rows("1:1").Select
                 Selection.Insert Shift:=xlDown
@@ -229,36 +293,35 @@ GET_SPEC_FILE_2:
                 'Sheets("SPEC").Select
                 Range("M2").Select
                 Selection.NumberFormat = "0.00"
+                Application.CutCopyMode = False
+                Selection.Copy
+                Sheets("analysis").Select
+                Range("C" & SHEET_INCRE + 2).Select
+                ActiveSheet.Paste
+                Sheets("SPEC").Select
                 Range("A1:M8001").Select
                 Range("M2").Activate
                 Selection.Columns.AutoFit
                 'Resume GET_CATEG_FILE_2
+                GoTo S2_R
 '-----------------------------------
 GET_CATEG_FILE:
-                Resume GET_CATEG_FILE_2
-GET_CATEG_FILE_2:
-                Application.DisplayAlerts = False
-                On Error GoTo 0
-                On Error GoTo GET_CAL_FILE
-                Workbooks.Open Filename:= _
-                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\CATEG." & BRANCH_CODE(Index_Branch) & ".csv"
-                
-                ERROR_CHECK_INDEX = ERROR_CHECK_INDEX + 1
-                SHEET_INCRE = SHEET_INCRE + 1
-
-                Windows("CATEG." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("CATEG." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 Range("A1:A8000").Select
                 Application.CutCopyMode = False
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
+                Sheets("analysis").Select
+                Range("B" & SHEET_INCRE + 3).Select
+                ActiveCell.FormulaR1C1 = "CATEG"
                 Sheets.Add After:=ActiveSheet
                 Sheets("Sheet" & SHEET_INCRE).Name = "CATEG"
                 Sheets("CATEG").Select
                 ActiveSheet.Paste
-                Windows("CATEG." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("CATEG." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 ActiveWindow.Close
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CATEG").Select
                 Application.CutCopyMode = False
                 Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
@@ -273,14 +336,14 @@ GET_CATEG_FILE_2:
                 Range("N2").Select
 
 
-                Workbooks("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("categ").Select
                 Rows("1:1").Select
                 Range("B1").Activate
                 Application.CutCopyMode = False
                 Selection.Copy
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CATEG").Select
                 Rows("1:1").Select
                 Selection.Insert Shift:=xlDown
@@ -288,38 +351,38 @@ GET_CATEG_FILE_2:
                 'Sheets("CATEG").Select
                 Range("N2").Select
                 Selection.NumberFormat = "0.00"
+                Application.CutCopyMode = False
+                Selection.Copy
+                Sheets("analysis").Select
+                Range("C" & SHEET_INCRE + 2).Select
+                ActiveSheet.Paste
+                Sheets("CATEG").Select
+                
                 Range("A1:N8001").Select
                 Range("N2").Activate
                 Selection.Columns.AutoFit
-                'Resume GET_CAL_FILE_2
 '-----------------------------------
 GET_CAL_FILE:
-                Resume GET_CAL_FILE
-GET_CAL_FILE_2:
-                If ERROR_CHECK_INDEX = 0 Then
-                    GoTo ESCAPE_LABEL
-                Else
                     Application.DisplayAlerts = False
-                    On Error GoTo 0
                     On Error GoTo GET_CPL_FILE
                     Workbooks.Open Filename:= _
-                    FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\CAL." & BRANCH_CODE(Index_Branch) & ".csv"
-    
+                    FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\CAL." & BRANCH_CODE(Index_Branch) & ".csv"
+                    
                     SHEET_INCRE = SHEET_INCRE + 1
     
-                    Windows("CAL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                    Workbooks("CAL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                     Range("A1:M8000").Select
                     Application.CutCopyMode = False
                     Selection.Copy
-                    Windows("AnalysisTest.xlsx").Activate
+                    Workbooks("AnalysisTest.xlsx").Activate
                     Sheets.Add After:=ActiveSheet
                     Sheets("Sheet" & SHEET_INCRE).Name = "CAL"
                     Sheets("CAL").Select
                     ActiveSheet.Paste
-                    Windows("CAL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                    Workbooks("CAL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                     ActiveWindow.Close
     
-                    Workbooks("VBA RUN.xlsm").Activate
+                    Workbooks("GL Analysis.xlsm").Activate
                     ActiveWindow.ScrollWorkbookTabs Sheets:=1
                     Sheets("cal").Select
                     ActiveWindow.SmallScroll Down:=-18
@@ -327,61 +390,59 @@ GET_CAL_FILE_2:
                     Application.CutCopyMode = False
                     Selection.Copy
     
-                    Windows("AnalysisTest.xlsx").Activate
+                    Workbooks("AnalysisTest.xlsx").Activate
                     Sheets("CAL").Select
                     Rows("1:1").Select
                     Selection.Insert Shift:=xlDown
     
                     '**PASTING OF "CCY" HEADER
-                    Workbooks("VBA RUN.xlsm").Activate
+                    Workbooks("GL Analysis.xlsm").Activate
                     Sheets("categ").Select
                     Range("B1").Select
                     Selection.Copy
-                    Windows("AnalysisTest.xlsx").Activate
+                    Workbooks("AnalysisTest.xlsx").Activate
                     Sheets("CAL").Select
                     Range("C1").Select
                     ActiveSheet.Paste
     
                     '***COPYING AND PASTING OF "CO.CODE" HEADER
-                    Workbooks("VBA RUN.xlsm").Activate
+                    Workbooks("GL Analysis.xlsm").Activate
                     Sheets("categ").Select
                     Range("L1").Select
                     Application.CutCopyMode = False
                     Selection.Copy
-                    Windows("AnalysisTest.xlsx").Activate
+                    Workbooks("AnalysisTest.xlsx").Activate
                     Sheets("CAL").Select
                     Range("K1").Select
                     ActiveSheet.Paste
     
-                    Windows("AnalysisTest.xlsx").Activate
+                    Workbooks("AnalysisTest.xlsx").Activate
                     Sheets("CAL").Select
                     Selection.Columns.AutoFit
-                End If
-                'Resume GET_CPL_FILE_2
 '-----------------------------------
 GET_CPL_FILE:
-                Resume GET_CPL_FILE
+                Resume GET_CPL_FILE_2
 GET_CPL_FILE_2:
                 Application.DisplayAlerts = False
                 On Error GoTo SAVE_AND_BRANCH_OUT
                 Workbooks.Open Filename:= _
-                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "-\CPL." & BRANCH_CODE(Index_Branch) & ".csv"
+                FOLDER_PATH_NAME & "\" & BRANCH_CODE(Index_Branch) & "\CPL." & BRANCH_CODE(Index_Branch) & ".csv"
                 
                 SHEET_INCRE = SHEET_INCRE + 1
 
-                Windows("CPL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("CPL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 Range("A1:M8000").Select
                 Application.CutCopyMode = False
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets.Add After:=ActiveSheet
                 Sheets("Sheet" & SHEET_INCRE).Name = "CPL"
                 Sheets("CPL").Select
                 ActiveSheet.Paste
-                Windows("CPL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
+                Workbooks("CPL." & BRANCH_CODE(Index_Branch) & ".csv").Activate
                 ActiveWindow.Close
                 
-                Workbooks("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 ActiveWindow.ScrollWorkbookTabs Sheets:=1
                 Sheets("cpl").Select
                 ActiveWindow.SmallScroll Down:=-18
@@ -389,47 +450,47 @@ GET_CPL_FILE_2:
                 Application.CutCopyMode = False
                 Selection.Copy
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CPL").Select
                 Rows("1:1").Select
                 Selection.Insert Shift:=xlDown
 
                 '**PASTING OF "CCY" HEADER
-                Windows("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("categ").Select
                 Range("B1").Select
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CPL").Select
                 Range("D1").Select
                 ActiveSheet.Paste
 
                 '***COPYING AND PASTING OF "CO.CODE" HEADER
-                Windows("VBA RUN.xlsm").Activate
+                Workbooks("GL Analysis.xlsm").Activate
                 Sheets("categ").Select
                 Range("L1").Select
                 Application.CutCopyMode = False
                 Selection.Copy
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CPL").Select
                 Range("C1").Select
                 ActiveSheet.Paste
 
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Sheets("CPL").Select
                 Selection.Columns.AutoFit
                 
                 Resume SAVE_AND_BRANCH_OUT
 '-----------------------------------
 SAVE_AND_BRANCH_OUT:
-                Windows("AnalysisTest.xlsx").Activate
+                Workbooks("AnalysisTest.xlsx").Activate
                 Application.DisplayAlerts = False
-                Sheets("Sheet1").Delete
+                'Sheets("anaylsis").Select
+                'Sheets("anaylsis").Delete
                 ActiveWorkbook.Save
                 ActiveWorkbook.Close
                 Resume ESCAPE_LABEL
 ESCAPE_LABEL:
-                ActiveWorkbook.Delete
                 Application.DisplayAlerts = True
             End Select
         End Select
@@ -437,9 +498,9 @@ ESCAPE_LABEL:
 
     MsgBox "Index_Branch: " & Index_Branch & " , Index_Incomplete: " & Index_Incomplete
 
-    MsgBox "Analysis of " & Index_Branch & " Branch(es) out of " & Index_Branch + Index_Incomplete & " has been completed"
+    MsgBox "Analysis of " & Index_Branch & " Branch(es) out of " & Index_Branch + Index_Incomplete & " possible branches have been completed"
     
-    Workbooks("VBA RUN.xlsm").Activate
-    Sheets("Sheet1").Activate
+    Workbooks("GL Analysis.xlsm").Activate
+    Sheets("GL Analysis").Activate
 
 End Sub
